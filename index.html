@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Word Collector — English Vocabulary Game</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a1a2e;font-family:'Segoe UI',system-ui,sans-serif;}
+#root{width:100%;height:100%;display:flex;flex-direction:column;}
+.screen{display:none;width:100%;height:100%;flex-direction:column;overflow-y:auto;}
+.screen.active{display:flex;}
+
+/* HOME */
+#screen-home{background:linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);padding:16px;align-items:center;}
+.home-title{font-size:clamp(22px,6vw,32px);font-weight:700;color:#FFD700;text-align:center;margin-top:12px;letter-spacing:1px;}
+.home-sub{font-size:clamp(11px,3vw,14px);color:#aab4c8;text-align:center;margin:6px 0 18px;}
+.section-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:480px;}
+.sec-card{background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.12);border-radius:14px;padding:14px 10px;cursor:pointer;text-align:center;transition:transform 0.15s,border-color 0.15s;}
+.sec-card:active{transform:scale(0.95);}
+.sec-icon{font-size:clamp(22px,5vw,28px);}
+.sec-name{font-size:clamp(12px,3.2vw,15px);font-weight:600;color:#fff;margin-top:4px;}
+.sec-desc{font-size:clamp(10px,2.5vw,12px);color:#aab4c8;margin-top:2px;}
+.sec-prog{font-size:clamp(9px,2.2vw,11px);color:#FFD700;margin-top:4px;}
+.rules-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;font-size:clamp(10px,2.5vw,12px);color:#aab4c8;}
+.rules-bar span{background:rgba(255,255,255,0.08);border-radius:20px;padding:4px 10px;}
+
+/* GAME */
+#screen-game{background:#1a1a2e;padding:10px 10px 6px;}
+.hud{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.07);border-radius:12px;padding:8px 10px;margin-bottom:8px;gap:4px;}
+.hud-item{text-align:center;flex:1;}
+.hud-lbl{font-size:clamp(8px,2vw,10px);color:#aab4c8;text-transform:uppercase;letter-spacing:0.04em;}
+.hud-val{font-size:clamp(13px,3.5vw,18px);font-weight:700;color:#fff;}
+.hud-val.warn{color:#FF6B6B;animation:pulse 0.5s infinite alternate;}
+@keyframes pulse{from{opacity:1;}to{opacity:0.5;}}
+.prog-bg{height:5px;background:rgba(255,255,255,0.1);border-radius:99px;margin-bottom:8px;}
+.prog-fill{height:5px;background:linear-gradient(90deg,#FFD700,#FF9F43);border-radius:99px;transition:width 0.3s;}
+.lvl-title{font-size:clamp(11px,3vw,14px);font-weight:600;color:#FFD700;margin-bottom:2px;}
+.lvl-inst{font-size:clamp(10px,2.5vw,12px);color:#aab4c8;margin-bottom:8px;}
+
+/* GAME AREA */
+.game-area{position:relative;flex:1;min-height:0;background:linear-gradient(180deg,#0d1b2a 0%,#1a3a5c 70%,#2d5a1b 70%,#1e3d12 100%);border-radius:14px;overflow:hidden;border:1.5px solid rgba(255,255,255,0.08);}
+.ground-strip{position:absolute;bottom:0;left:0;right:0;height:30%;background:linear-gradient(180deg,#2d5a1b,#1e3d12);border-top:2px solid #4a8a26;}
+.ground-dots{position:absolute;top:4px;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg,#4a8a26 0px,#4a8a26 12px,transparent 12px,transparent 24px);}
+
+/* RUNNER */
+.runner{position:absolute;left:14%;bottom:30%;width:clamp(32px,8vw,46px);height:clamp(44px,11vw,62px);}
+.r-head{position:absolute;top:0;left:50%;transform:translateX(-50%);width:55%;height:35%;background:#FAC775;border-radius:50%;border:2px solid #BA7517;z-index:2;}
+.r-body{position:absolute;top:33%;left:50%;transform:translateX(-50%);width:45%;height:38%;background:#2563EB;border-radius:5px;}
+.r-arm{position:absolute;top:36%;width:15%;height:28%;background:#2563EB;border-radius:4px;transform-origin:top center;}
+.r-arm.l{left:12%;animation:arm-l 0.45s infinite alternate;}
+.r-arm.r{right:12%;animation:arm-r 0.45s infinite alternate;}
+@keyframes arm-l{from{transform:rotate(22deg);}to{transform:rotate(-22deg);}}
+@keyframes arm-r{from{transform:rotate(-22deg);}to{transform:rotate(22deg);}}
+.r-leg{position:absolute;bottom:0;width:18%;height:30%;background:#1D4ED8;border-radius:4px;transform-origin:top center;}
+.r-leg.l{left:28%;animation:leg-l 0.45s infinite alternate;}
+.r-leg.r{right:28%;animation:leg-r 0.45s infinite alternate;}
+@keyframes leg-l{from{transform:rotate(-22deg);}to{transform:rotate(22deg);}}
+@keyframes leg-r{from{transform:rotate(22deg);}to{transform:rotate(-22deg);}}
+
+/* COINS — all same neutral gold, no color hints */
+.coin{
+  position:absolute;
+  height:clamp(36px,9vw,48px);
+  min-width:clamp(52px,14vw,72px);
+  max-width:clamp(80px,22vw,110px);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(10px,2.8vw,13px);
+  font-weight:700;
+  text-align:center;
+  padding:4px 8px;
+  cursor:pointer;
+  white-space:nowrap;
+  user-select:none;
+  background:linear-gradient(135deg,#F5C518,#E8A800);
+  border:2px solid #C8860A;
+  color:#3D2000;
+  box-shadow:0 3px 8px rgba(0,0,0,0.3);
+  transition:transform 0.08s;
+}
+.coin:active{transform:scale(0.92);}
+.coin.popping{animation:coin-pop 0.35s forwards;}
+@keyframes coin-pop{0%{transform:scale(1);opacity:1;}100%{transform:scale(0) translateY(-20px);opacity:0;}}
+
+.feedback{position:absolute;top:8px;right:10px;font-size:clamp(13px,3.5vw,17px);font-weight:700;opacity:0;pointer-events:none;}
+.feedback.pos{color:#2ECC71;animation:fb 0.9s forwards;}
+.feedback.neg{color:#FF6B6B;animation:fb 0.9s forwards;}
+@keyframes fb{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-18px);}}
+.float-sc{position:absolute;font-size:clamp(13px,3.5vw,16px);font-weight:700;pointer-events:none;animation:float-up 0.9s forwards;}
+@keyframes float-up{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-36px);}}
+.hint-bar{font-size:clamp(9px,2.3vw,11px);color:#aab4c8;text-align:center;margin-top:6px;}
+
+/* RESULT */
+#screen-result{background:linear-gradient(160deg,#1a1a2e,#0f3460);align-items:center;justify-content:center;padding:24px 16px;text-align:center;}
+.res-icon{font-size:clamp(40px,12vw,56px);margin-bottom:8px;}
+.res-title{font-size:clamp(18px,5vw,26px);font-weight:700;color:#FFD700;margin-bottom:6px;}
+.res-sub{font-size:clamp(11px,3vw,14px);color:#aab4c8;margin-bottom:20px;max-width:320px;}
+.stats-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;}
+.stat-box{background:rgba(255,255,255,0.07);border-radius:12px;padding:10px 18px;}
+.stat-val{font-size:clamp(20px,5vw,26px);font-weight:700;color:#FFD700;}
+.stat-lbl{font-size:clamp(10px,2.5vw,12px);color:#aab4c8;}
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.btn{background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);border-radius:10px;padding:10px 18px;font-size:clamp(12px,3.2vw,14px);cursor:pointer;color:#fff;font-family:inherit;transition:background 0.15s,transform 0.1s;}
+.btn:active{transform:scale(0.95);}
+.btn.primary{background:#FFD700;color:#1a1a2e;border-color:#FFD700;font-weight:700;}
+.btn.primary:active{background:#e6c200;}
+</style>
+</head>
+<body>
+<div id="root">
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen active">
+    <div class="home-title">🏃 Word Collector</div>
+    <div class="home-sub">Run · Read · Collect · Level Up!</div>
+    <div class="section-grid" id="section-grid"></div>
+    <div class="rules-bar">
+      <span>✅ Correct = +5 pts</span>
+      <span>❌ Wrong = −1 pt</span>
+      <span>⏱ Beat the clock</span>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="screen-game" class="screen">
+    <div class="hud">
+      <div class="hud-item"><div class="hud-lbl">Section</div><div class="hud-val" id="hud-sec">—</div></div>
+      <div class="hud-item"><div class="hud-lbl">Level</div><div class="hud-val" id="hud-lvl">1</div></div>
+      <div class="hud-item"><div class="hud-lbl">Score</div><div class="hud-val" id="hud-score">0</div></div>
+      <div class="hud-item"><div class="hud-lbl">Target</div><div class="hud-val" id="hud-target">20</div></div>
+      <div class="hud-item"><div class="hud-lbl">Time</div><div class="hud-val" id="hud-time">60</div></div>
+    </div>
+    <div class="prog-bg"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="lvl-title" id="lvl-title"></div>
+    <div class="lvl-inst" id="lvl-inst"></div>
+    <div class="game-area" id="game-area">
+      <div class="runner" id="runner">
+        <div class="r-head"></div>
+        <div class="r-body"></div>
+        <div class="r-arm l"></div>
+        <div class="r-arm r"></div>
+        <div class="r-leg l"></div>
+        <div class="r-leg r"></div>
+      </div>
+      <div class="ground-strip"><div class="ground-dots"></div></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <div class="hint-bar">Tap a word tile to collect it — read carefully, all tiles look the same! 🪙</div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screen-result" class="screen">
+    <div class="res-icon" id="res-icon">🎉</div>
+    <div class="res-title" id="res-title">Level Complete!</div>
+    <div class="res-sub" id="res-sub"></div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-val" id="rs-score">0</div><div class="stat-lbl">Score</div></div>
+      <div class="stat-box"><div class="stat-val" id="rs-correct">0</div><div class="stat-lbl">Correct</div></div>
+      <div class="stat-box"><div class="stat-val" id="rs-wrong">0</div><div class="stat-lbl">Wrong</div></div>
+    </div>
+    <div class="btn-row" id="res-btns"></div>
+  </div>
+
+</div>
+<script>
+const SECTIONS=[
+  {id:'nouns',name:'Nouns',icon:'📦',desc:'People, places, things',levels:[
+    {title:'Level 1 — Common Nouns',inst:'Collect all common nouns!',target:20,time:70,correct:['dog','book','city','rain','river','table','flower','stone','bridge','cloud'],wrong:['run','tall','slowly','happy','jump','big','red','quickly','sleep','bright']},
+    {title:'Level 2 — Proper Nouns',inst:'Collect proper nouns only!',target:30,time:65,correct:['India','London','Krishna','Monday','Amazon','Google','Paris','Diwali','English','Nile'],wrong:['tree','walk','fast','blue','eat','heavy','dark','small','loud','drive']},
+    {title:'Level 3 — Abstract Nouns',inst:'Collect abstract nouns!',target:40,time:60,correct:['love','peace','joy','anger','hope','truth','beauty','faith','freedom','wisdom'],wrong:['run','green','shout','smooth','carry','bright','clean','jump','quick','warm']}
+  ]},
+  {id:'verbs',name:'Verbs',icon:'⚡',desc:'Actions & doing words',levels:[
+    {title:'Level 1 — Action Verbs',inst:'Collect all action verbs!',target:20,time:70,correct:['run','jump','eat','write','draw','swim','sing','dance','read','throw'],wrong:['tall','quick','slowly','happy','big','red','book','city','stone','flower']},
+    {title:'Level 2 — Past Tense',inst:'Collect past tense verbs!',target:30,time:65,correct:['ran','jumped','ate','wrote','drew','swam','sang','danced','read','threw'],wrong:['run','jump','eat','write','draw','swim','sing','dance','throw','reads']},
+    {title:'Level 3 — Linking Verbs',inst:'Collect linking verbs!',target:40,time:60,correct:['is','are','was','were','seem','become','feel','appear','remain','look'],wrong:['run','tall','big','fast','book','rain','sing','red','throw','happy']}
+  ]},
+  {id:'adj',name:'Adjectives',icon:'🎨',desc:'Describing words',levels:[
+    {title:'Level 1 — Size Adjectives',inst:'Collect size adjectives!',target:20,time:70,correct:['big','small','huge','tiny','tall','short','long','wide','narrow','large'],wrong:['run','quickly','table','sing','eat','river','wrote','Monday','jump','cloud']},
+    {title:'Level 2 — Emotions',inst:'Collect feeling adjectives!',target:30,time:65,correct:['happy','sad','angry','scared','excited','calm','proud','shy','brave','bored'],wrong:['run','table','blue','sing','flower','quickly','eat','wrote','jump','river']},
+    {title:'Level 3 — Comparatives',inst:'Collect comparative adjectives!',target:40,time:60,correct:['bigger','smaller','faster','slower','taller','shorter','smarter','louder','softer','nicer'],wrong:['big','small','fast','slow','tall','short','smart','loud','soft','nice']}
+  ]},
+  {id:'adv',name:'Adverbs',icon:'🚀',desc:'How, when, where',levels:[
+    {title:'Level 1 — Manner Adverbs',inst:'Collect manner adverbs!',target:20,time:70,correct:['quickly','slowly','loudly','softly','happily','sadly','bravely','calmly','eagerly','gently'],wrong:['quick','slow','loud','soft','happy','sad','brave','calm','eager','gentle']},
+    {title:'Level 2 — Time Adverbs',inst:'Collect time adverbs!',target:30,time:65,correct:['today','yesterday','soon','now','already','still','always','never','often','lately'],wrong:['here','there','quickly','loudly','big','red','sing','table','jump','blue']},
+    {title:'Level 3 — Place Adverbs',inst:'Collect place adverbs!',target:40,time:60,correct:['here','there','nearby','outside','inside','above','below','forward','backward','everywhere'],wrong:['quickly','today','big','happy','sing','table','blue','run','wrote','river']}
+  ]},
+  {id:'prep',name:'Prepositions',icon:'🔗',desc:'Linking words',levels:[
+    {title:'Level 1 — Place Preps',inst:'Collect prepositions of place!',target:20,time:70,correct:['in','on','at','under','over','beside','behind','between','above','below'],wrong:['run','big','happy','sing','table','quickly','blue','wrote','jump','river']},
+    {title:'Level 2 — Time Preps',inst:'Collect prepositions of time!',target:30,time:65,correct:['since','for','during','before','after','until','within','throughout','by','at'],wrong:['run','big','happy','sing','table','quickly','blue','wrote','jump','river']},
+    {title:'Level 3 — Direction Preps',inst:'Collect direction prepositions!',target:40,time:60,correct:['to','from','into','onto','towards','across','through','along','past','around'],wrong:['run','big','happy','sing','table','quickly','blue','wrote','jump','river']}
+  ]},
+  {id:'conj',name:'Conjunctions',icon:'🔀',desc:'Joining words',levels:[
+    {title:'Level 1 — Coordinating',inst:'Collect coordinating conjunctions!',target:20,time:70,correct:['and','but','or','nor','for','yet','so'],wrong:['run','big','happy','sing','table','quickly','blue','wrote','jump','river']},
+    {title:'Level 2 — Subordinating',inst:'Collect subordinating conjunctions!',target:30,time:65,correct:['because','although','since','while','if','unless','when','after','before','until'],wrong:['run','big','happy','sing','table','quickly','blue','wrote','jump','river']},
+    {title:'Level 3 — Mixed',inst:'Collect ALL conjunctions!',target:40,time:60,correct:['and','but','or','because','although','since','while','if','unless','when'],wrong:['run','big','happy','sing','table','quickly','blue','wrote','jump','river']}
+  ]}
+];
+
+let S={sectionIdx:0,levelIdx:0,score:0,timerLeft:0,gameActive:false,timerInt:null,spawnTO:null,correct:0,wrong:0};
+let levelProg={};
+let laneIdx=0;
+const LANES_PCT=[32,46,60];
+const SPEED=0.55;
+const GAP=3200;
+
+function $(id){return document.getElementById(id);}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+
+function buildHome(){
+  const g=$('section-grid');g.innerHTML='';
+  SECTIONS.forEach((sec,i)=>{
+    const p=levelProg[sec.id]||0;
+    const d=document.createElement('div');
+    d.className='sec-card';
+    d.innerHTML=`<div class="sec-icon">${sec.icon}</div><div class="sec-name">${sec.name}</div><div class="sec-desc">${sec.desc}</div><div class="sec-prog">${p}/${sec.levels.length} levels</div>`;
+    d.onclick=()=>startSection(i);
+    g.appendChild(d);
+  });
+}
+
+function startSection(i){
+  S.sectionIdx=i;S.levelIdx=levelProg[SECTIONS[i].id]||0;
+  if(S.levelIdx>=SECTIONS[i].levels.length)S.levelIdx=0;
+  startLevel();
+}
+
+function startLevel(){
+  clearGame();
+  const sec=SECTIONS[S.sectionIdx],lvl=sec.levels[S.levelIdx];
+  S.score=0;S.correct=0;S.wrong=0;S.timerLeft=lvl.time;S.gameActive=true;
+  $('hud-sec').textContent=sec.name;
+  $('hud-lvl').textContent=S.levelIdx+1;
+  $('hud-score').textContent=0;
+  $('hud-target').textContent=lvl.target;
+  $('hud-time').textContent=lvl.time;
+  $('hud-time').classList.remove('warn');
+  $('lvl-title').textContent=lvl.title;
+  $('lvl-inst').textContent=lvl.inst;
+  $('prog-fill').style.width='0%';
+  showScreen('screen-game');
+  S.timerInt=setInterval(()=>{
+    S.timerLeft--;
+    $('hud-time').textContent=S.timerLeft;
+    if(S.timerLeft<=10)$('hud-time').classList.add('warn');
+    if(S.timerLeft<=0){clearInterval(S.timerInt);clearTimeout(S.spawnTO);endLevel(false);}
+  },1000);
+  const queue=buildQueue(lvl);
+  scheduleNext(queue,0,lvl);
+}
+
+function buildQueue(lvl){
+  const c=[...lvl.correct].sort(()=>Math.random()-0.5);
+  const w=[...lvl.wrong].sort(()=>Math.random()-0.5);
+  const all=[];
+  const max=Math.max(c.length,w.length);
+  for(let i=0;i<max;i++){if(i<c.length)all.push({word:c[i],isCorrect:true});if(i<w.length)all.push({word:w[i],isCorrect:false});}
+  for(let i=all.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[all[i],all[j]]=[all[j],all[i]];}
+  return all;
+}
+
+function scheduleNext(queue,qi,lvl){
+  if(!S.gameActive)return;
+  S.spawnTO=setTimeout(()=>{
+    if(!S.gameActive)return;
+    let q=queue,idx=qi;
+    if(idx>=q.length){q=buildQueue(lvl);idx=0;}
+    spawnCoin(q[idx]);
+    scheduleNext(q,idx+1,lvl);
+  },GAP);
+}
+
+function spawnCoin(item){
+  if(!S.gameActive)return;
+  const area=$('game-area');
+  const areaH=area.offsetHeight;
+  const coin=document.createElement('div');
+  coin.className='coin';
+  coin.textContent=item.word;
+  const lanePct=LANES_PCT[laneIdx%LANES_PCT.length];
+  laneIdx++;
+  const bottomPx=Math.round(areaH*(lanePct/100));
+  coin.style.bottom=bottomPx+'px';
+  let posX=area.offsetWidth+10;
+  coin.style.left=posX+'px';
+  area.appendChild(coin);
+  coin.onclick=()=>{if(coin.dataset.c)return;coin.dataset.c='1';tap(coin,item.isCorrect,bottomPx);};
+  function step(){
+    if(!S.gameActive){coin.remove();return;}
+    posX-=SPEED;
+    coin.style.left=posX+'px';
+    if(posX<-120){coin.remove();return;}
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function tap(coin,isCorrect,bottomPx){
+  coin.classList.add('popping');
+  const delta=isCorrect?5:-1;
+  S.score=Math.max(0,S.score+delta);
+  if(isCorrect)S.correct++;else S.wrong++;
+  const area=$('game-area');
+  const fl=document.createElement('div');
+  fl.className='float-sc';
+  fl.textContent=isCorrect?'+5':'−1';
+  fl.style.color=isCorrect?'#2ECC71':'#FF6B6B';
+  fl.style.left=coin.style.left;
+  fl.style.bottom=(bottomPx+50)+'px';
+  area.appendChild(fl);
+  setTimeout(()=>fl.remove(),950);
+  const fb=$('feedback');
+  fb.className='feedback';
+  fb.textContent=isCorrect?'✓ Correct!':'✗ Wrong!';
+  void fb.offsetWidth;
+  fb.className='feedback '+(isCorrect?'pos':'neg');
+  $('hud-score').textContent=S.score;
+  const lvl=SECTIONS[S.sectionIdx].levels[S.levelIdx];
+  $('prog-fill').style.width=Math.min(100,(S.score/lvl.target)*100)+'%';
+  setTimeout(()=>coin.remove(),360);
+  if(S.score>=lvl.target){S.gameActive=false;clearInterval(S.timerInt);clearTimeout(S.spawnTO);setTimeout(()=>endLevel(true),500);}
+}
+
+function clearGame(){
+  clearInterval(S.timerInt);clearTimeout(S.spawnTO);S.gameActive=false;
+  const area=$('game-area');
+  if(area)area.querySelectorAll('.coin,.float-sc').forEach(e=>e.remove());
+}
+
+function endLevel(passed){
+  clearGame();
+  const sec=SECTIONS[S.sectionIdx],lvl=sec.levels[S.levelIdx];
+  const nextIdx=S.levelIdx+1,hasNext=nextIdx<sec.levels.length;
+  const nextSec=S.sectionIdx+1<SECTIONS.length?SECTIONS[S.sectionIdx+1]:null;
+  const won=passed||S.score>=lvl.target;
+  if(won)levelProg[sec.id]=Math.max(levelProg[sec.id]||0,nextIdx);
+  $('rs-score').textContent=S.score;
+  $('rs-correct').textContent=S.correct;
+  $('rs-wrong').textContent=S.wrong;
+  $('res-icon').textContent=won?'🎉':'⏰';
+  $('res-title').textContent=won?'Level Complete!':"Time's Up!";
+  $('res-sub').textContent=won
+    ?(hasNext?`Great! You scored ${S.score}/${lvl.target}. Ready for Level ${nextIdx+1}?`:`All levels in ${sec.name} done!${nextSec?' Try '+nextSec.name+' next!':''}`)
+    :`You needed ${lvl.target} pts but scored ${S.score}. Keep trying!`;
+  const btns=$('res-btns');btns.innerHTML='';
+  const mk=(label,cls,fn)=>{const b=document.createElement('button');b.className='btn '+cls;b.textContent=label;b.onclick=fn;btns.appendChild(b);};
+  mk('↩ Retry','',()=>startLevel());
+  if(won&&hasNext)mk('Next Level →','primary',()=>{S.levelIdx=nextIdx;startLevel();});
+  if(won&&!hasNext&&nextSec)mk(nextSec.icon+' '+nextSec.name+' →','primary',()=>{S.sectionIdx++;S.levelIdx=0;startLevel();});
+  mk('🏠 Sections','',()=>{buildHome();showScreen('screen-home');});
+  showScreen('screen-result');
+}
+
+buildHome();
+</script>
+</body>
+</html>
